@@ -853,14 +853,23 @@ fi
 # Aller dans le dossier Back-end-view
 cd "Ryvie/Back-end-view" || { echo "❌ Dossier 'Ryvie/Back-end-view' introuvable"; exit 1; }
 
-# Copier le fichier .env depuis Desktop (fallback Bureau)
-SRC_ENV="$HOME/Desktop/.env"
-if [ ! -f "$SRC_ENV" ]; then
-  ALT_ENV="$HOME/Bureau/.env"
-  if [ -f "$ALT_ENV" ]; then
-    SRC_ENV="$ALT_ENV"
-  fi
-fi
+# Définir les emplacements possibles pour le fichier .env
+POSSIBLE_ENV_PATHS=(
+    "$HOME/Desktop/.env"       # English desktop
+    "$HOME/Bureau/.env"        # French desktop
+    "$HOME/.env"               # Home directory
+    "/root/.env"               # Root home directory
+)
+
+# Chercher un fichier .env existant
+SRC_ENV=""
+for env_path in "${POSSIBLE_ENV_PATHS[@]}"; do
+    if [ -f "$env_path" ]; then
+        SRC_ENV="$env_path"
+        echo "✅ Fichier .env trouvé à: $SRC_ENV"
+        break
+    fi
+done
 
 if [ -f "$SRC_ENV" ]; then
   echo "📄 Copie de $SRC_ENV vers $(pwd)/.env"
