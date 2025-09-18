@@ -1020,15 +1020,47 @@ EOL
   echo "✅ Fichier .env par défaut créé avec succès"
 fi
 
-# Installer les dépendances et lancer l'application
+# Installer PM2 globalement si ce n'est pas déjà fait
+if ! command -v pm2 &> /dev/null; then
+    echo "📦 Installation de PM2..."
+    sudo npm install -g pm2 || { echo "❌ Échec de l'installation de PM2"; exit 1; }
+    # Configurer PM2 pour le démarrage automatique
+    sudo pm2 startup
+fi
+
+# Installer les dépendances
 echo "📦 Installation des dépendances (npm install)"
 npm install || { echo "❌ npm install a échoué"; exit 1; }
 
-echo "🚀 Lancement de Back-end-view (node index.js) au premier plan"
-echo "ℹ️ Les logs s'affichent ci-dessous. Appuyez sur Ctrl+C pour arrêter."
+# Créer le dossier de logs s'il n'existe pas
 mkdir -p logs
-# Afficher les logs en direct ET les sauvegarder dans un fichier
-node index.js 2>&1 | tee -a logs/backend-view.out
+
+# Démarrer ou redémarrer le service avec PM2
+echo "🚀 Démarrage du Back-end-view avec PM2..."
+pm2 describe backend-view > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "🔄 Redémarrage du service backend-view existant..."
+    pm2 restart backend-view --update-env
+else
+    echo "✨ Création d'un nouveau service PM2 pour backend-view..."
+    pm2 start index.js --name "backend-view" --output "logs/backend-view-out.log" --error "logs/backend-error.log" --time
+fi
+
+# Sauvegarder la configuration PM2
+pm2 save
+
+# Configurer PM2 pour le démarrage automatique
+pm2 startup | tail -n 1 | bash
+
+echo "✅ Back-end-view est géré par PM2"
+echo "📝 Logs d'accès: $(pwd)/logs/backend-view-out.log"
+echo "📝 Logs d'erreur: $(pwd)/logs/backend-error.log"
+echo "ℹ️ Commandes utiles:"
+echo "   - Voir les logs: pm2 logs backend-view"
+echo "   - Arrêter: pm2 stop backend-view"
+echo "   - Redémarrer: pm2 restart backend-view"
+echo "   - Statut: pm2 status"
 
 # NetBird Configuration
 (
