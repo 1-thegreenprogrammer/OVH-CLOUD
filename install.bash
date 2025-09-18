@@ -1062,6 +1062,57 @@ echo "   - Arrêter: pm2 stop backend-view"
 echo "   - Redémarrer: pm2 restart backend-view"
 echo "   - Statut: pm2 status"
 
+# Frontend setup with PM2
+FRONTEND_DIR="Ryvie/Ryvie-Front"
+if [ -d "$FRONTEND_DIR" ]; then
+    echo "\n🚀 Configuration du frontend avec PM2..."
+    cd "$FRONTEND_DIR" || { echo "❌ Impossible d'accéder au dossier $FRONTEND_DIR"; exit 1; }
+    
+    # Install frontend dependencies
+    echo "📦 Installation des dépendances du frontend..."
+    npm install || { echo "❌ Échec de l'installation des dépendances du frontend"; exit 1; }
+    
+    # Build the frontend
+    echo "🔨 Construction du frontend..."
+    npm run build || { echo "❌ Échec de la construction du frontend"; exit 1; }
+    
+    # Install serve if not present
+    if ! command -v serve &> /dev/null; then
+        echo "📦 Installation de serve globalement..."
+        sudo npm install -g serve
+    fi
+    
+    # Start frontend with PM2
+    echo "🚀 Démarrage du frontend avec PM2..."
+    pm2 describe frontend > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        echo "🔄 Redémarrage du service frontend existant..."
+        pm2 restart frontend --update-env
+    else
+        echo "✨ Création d'un nouveau service PM2 pour le frontend..."
+        pm2 serve build 3000 --spa --name "frontend" --output "../logs/frontend-out.log" --error "../logs/frontend-error.log" --time
+    fi
+    
+    # Save PM2 configuration
+    pm2 save
+    
+    echo "✅ Frontend est géré par PM2"
+    echo "📝 Logs d'accès: $(pwd)/../logs/frontend-out.log"
+    echo "📝 Logs d'erreur: $(pwd)/../logs/frontend-error.log"
+    echo "🌐 Frontend disponible sur: http://localhost:3000"
+    echo "ℹ️ Commandes utiles:"
+    echo "   - Voir les logs: pm2 logs frontend"
+    echo "   - Arrêter: pm2 stop frontend"
+    echo "   - Redémarrer: pm2 restart frontend"
+    
+    # Return to original directory
+    cd - > /dev/null
+else
+    echo "\n⚠️ Dossier du frontend non trouvé: $FRONTEND_DIR"
+    echo "   Le frontend ne sera pas démarré automatiquement."
+fi
+
 # NetBird Configuration
 (
     echo "🚀 Lancement de la configuration NetBird..."
